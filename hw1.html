@@ -332,7 +332,7 @@ function animate() {
   let camera;
   camera2.position.copy(theObject.localToWorld(new THREE.Vector3(-80, 30, 30)))
   camera2.lookAt(theObject.position)
-
+camera1.lookAt(theObject.position)
   if (turn) {
     camera = camera1;
   } else {
