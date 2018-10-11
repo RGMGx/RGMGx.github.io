@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		
+		<style>
+			
+			#info {
+  position: absolute;
+  top: 2%;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ff0000
+}
+
+body {
+  overflow: hidden;
+}
+
+		</style>
+	</head>
+	<body>
+
+		<div id="info">Hw1 drive with keyboard<br>
+
+  <button id="toggle" style="width:20%">viewpoint change</button>
+</div>
+
+<div id="container"></div>
+
+<script src="https://threejs.org/build/three.min.js"></script>
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+<script src="https://threejs.org/examples/js/objects/Water.js"></script>
+<script src="https://threejs.org/examples/js/objects/Sky.js"></script>
+
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://threejs.org/examples/js/WebGL.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></script>
+
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+
+
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@2410ad1a8f5844df00191600eafda59def537830/examples/js/loaders/MTLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@2410ad1a8f5844df00191600eafda59def537830/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@2410ad1a8f5844df00191600eafda59def537830/src/core/Clock.js"></script>
+
+		<script>
+	if (WEBGL.isWebGLAvailable() === false) {
+  document.body.appendChild(WEBGL.getWebGLErrorMessage());
+
+}
+var container, stats;
+var camera1, camera2 = new THREE.PerspectiveCamera(),
+  scene, renderer, light;
+var controls, water
+var theObject = new THREE.Object3D()
+var keyboard = new KeyboardState();
+
+var clock;
+var power;
+var pos = new THREE.Vector3();
+var vel = new THREE.Vector3();
+var force = new THREE.Vector3();
+var turn = false;
+(function() {
+  Math.clamp = function(val, min, max) {
+    return Math.min(Math.max(val, min), max);
+
+  }
+})();
+
+init();
+animate();
+
+$("#toggle").click(function() {
+  turn = !turn;
+});
+
+function init() {
+
+  clock = new THREE.Clock();
+  power = 5.0;
+  angle = 0.0;
+  container = document.getElementById('container');
+
+
+
+  //
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  container.appendChild(renderer.domElement);
+  //
+  scene = new THREE.Scene();
+  //
+  camera1 = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000);
+  camera1.position.set(30, 60, -120);
+  camera1.lookAt(new THREE.Vector3())
+
+  //
+  light = new THREE.DirectionalLight(0xffffff, 0.8);
+  scene.add(light);
+
+
+
+  // Water
+  var waterGeometry = new THREE.PlaneBufferGeometry(10000, 10000);
+  water = new THREE.Water(
+    waterGeometry, {
+
+      textureWidth: 700,
+      textureHeight: 700,
+      waterNormals: new THREE.TextureLoader().load('https://cdn.rawgit.com/mrdoob/three.js/dev/examples/textures/waternormals.jpg', function(texture) {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      }),
+      alpha: 1.0,
+      sunDirection: light.position.clone().normalize(),
+      sunColor: 0xffffff,
+      waterColor: 0x001e0f,
+      distortionScale: 3.7,
+      fog: scene.fog !== undefined
+    }
+  );
+
+  water.rotation.x = -Math.PI / 2;
+  scene.add(water);
+  // Skybox
+  var sky = new THREE.Sky();
+  sky.scale.setScalar(1000);
+  scene.add(sky);
+  var uniforms = sky.material.uniforms;
+  uniforms.turbidity.value = 10;
+  uniforms.rayleigh.value = 2;
+  uniforms.luminance.value = 1;
+  uniforms.mieCoefficient.value = 0.005;
+  uniforms.mieDirectionalG.value = 0.8;
+  var parameters = {
+    distance: 400,
+    inclination: 0.3,
+    azimuth: 0.205
+  };
+  var cubeCamera = new THREE.CubeCamera(1, 20000, 256);
+  cubeCamera.renderTarget.texture.minFilter = THREE.LinearMipMapLinearFilter;
+
+  function updateSun() {
+    var theta = Math.PI * (parameters.inclination - 0.5);
+    var phi = 2 * Math.PI * (parameters.azimuth - 0.5);
+    light.position.x = parameters.distance * Math.cos(phi);
+    light.position.y = parameters.distance * Math.sin(phi) * Math.sin(theta);
+    light.position.z = parameters.distance * Math.sin(phi) * Math.cos(theta);
+    sky.material.uniforms.sunPosition.value = light.position.copy(light.position);
+    water.material.uniforms.sunDirection.value.copy(light.position).normalize();
+    cubeCamera.update(renderer, scene);
+
+  }
+  updateSun();
+  //
+
+  function readModel(Sailboat, targetSize = 60) {
+
+    var onProgress = function(xhr) {
+      if (xhr.lengthComputable) {
+        var percentComplete = xhr.loaded / xhr.total * 100;
+        console.log(Math.round(percenyComplete, 2) + '% downloaded')
+      }
+
+    };
+    var onError = function(xhr) {
+      console.log("error")
+    };
+    var mtlLoader = new THREE.MTLLoader();
+    mtlLoader.setPath('https://cdn.rawgit.com/RGMGx/RGMGx.github.io/87d43725/models/');
+
+    mtlLoader.load('Sailboat.mtl', function(materials) {
+      materials.preload();
+      var objLoader = new THREE.OBJLoader();
+      objLoader.setMaterials(materials);
+      objLoader.setPath('https://cdn.rawgit.com/RGMGx/RGMGx.github.io/87d43725/models/')
+      objLoader.load('Sailboat.obj', function(object) {
+        let theObject = unitize(object, targetSize);
+        // theObject.add(new THREE.BoxHelper(theObject))
+        theObject.name = 'OBJ';
+
+        scene.add(theObject)
+      }, onProgress, onError);
+    });
+  }
+  readModel();
+  //
+
+  var loader = new THREE.TextureLoader();
+	var texMat
+  loader.load(
+    'https://rgmgx.github.io/textures/wood.jpg',
+    function(texture) {
+       texMat = new THREE.MeshBasicMaterial({
+        map: texture
+      });
+      let mesh = new THREE.Mesh(new THREE.BoxGeometry(80, 60, 60), new THREE.MeshPhongMaterial({
+        map: texture
+      }));
+
+      mesh.position.set(600, -10, 50)
+			
+      scene.add(mesh);
+    },
+    undefined,
+    function(xhr) {
+      console.log('An error happened');
+    }
+  );
+	
+ 
+    var geometry1 = new THREE.ConeBufferGeometry(20, 50, 60);
+    var material1 = new THREE.MeshNormalMaterial()
+   	 var material2 = new THREE.MeshBasicMaterial({color:0xFF0000})
+    var cone = new THREE.Mesh(geometry1, material1);
+    var cone1 = new THREE.Mesh(geometry1, texMat);
+    var cone2 = new THREE.Mesh(geometry1, material2);
+   // var cone2 = new THREE.Mesh(geometry1, material1);
+     cone.position.set(-100, 10, 500)
+     cone1.position.set(200,10,-500)
+     cone2.position.set(-600,10,0)
+    scene.add(cone);
+    scene.add(cone1)
+    scene.add(cone2)
+ 
+ 	
+ 
+  //
+
+
+
+  //
+
+  controls = new THREE.OrbitControls(camera1, renderer.domElement);
+  controls.maxPolarAngle = Math.PI * 0.495;
+  controls.target.set(0, 10, 0);
+  controls.minDistance = 40.0;
+  controls.maxDistance = 500.0;
+
+  controls.enableKeys = false;
+  stats = new Stats();
+  container.appendChild(stats.domElement);
+ 
+  // GUI
+
+  window.addEventListener('resize', onWindowResize, false);
+
+}
+
+function unitize(object, targetSize) {
+  var box3 = new THREE.Box3();
+  box3.setFromObject(object);
+  var size = new THREE.Vector3();
+  size.subVectors(box3.max, box3.min)
+  var center = new THREE.Vector3()
+  center.addVectors(box3.max, box3.min).multiplyScalar(0.5);
+
+  console.log('center:' + center.x + ', ' + center.y + ', ' + center.z)
+
+  console.log('size:' + size.x + ', ' + size.y + ', ' + size.z)
+
+  var objSize = Math.max(size.x, size.y, size.z)
+  var scaleSet = targetSize / objSize
+
+  theObject.add(object)
+  object.scale.set(scaleSet, scaleSet, scaleSet)
+  object.position.set(-center.x * scaleSet, -center.y * scaleSet + 24, -center.z * scaleSet)
+
+
+  return theObject
+
+}
+
+function onWindowResize() {
+  camera1.aspect = window.innerWidth / window.innerHeight;
+  camera1.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function update(dt) {
+  keyboard.update();
+  if (vel.length() > 0) {
+    angle = Math.atan2(-vel.z, vel.x); // update orientation
+  }
+
+  if (keyboard.pressed("space"))
+    power = 0.1;
+  if (keyboard.pressed("up"))
+    power *= 1.2;
+  if (keyboard.pressed("down"))
+    power /= 1.2;
+
+  power = Math.clamp(power, 0, 80.0);
+
+
+  var angle_thrust = angle;
+  if (keyboard.pressed("left"))
+    angle_thrust += 0.3;
+  if (keyboard.pressed("right"))
+    angle_thrust -= 0.3;
+
+  // compute force
+  var thrust = new THREE.Vector3(1, 0, 0).multiplyScalar(power).applyAxisAngle(new THREE.Vector3(0, 1, 0), angle_thrust);
+  force.copy(thrust);
+  force.add(vel.clone().multiplyScalar(-2))
+
+  // eulers
+  vel.add(force.clone().multiplyScalar(dt));
+  pos.add(vel.clone().multiplyScalar(dt));
+}
+
+function animate() {
+
+  // controls.update();
+
+  var dt = clock.getDelta();
+  update(dt);
+
+  // car update
+  theObject.position.copy(pos);
+  theObject.rotation.y = angle;
+  //
+  requestAnimationFrame(animate);
+  let camera;
+  camera2.position.copy(theObject.localToWorld(new THREE.Vector3(-80, 30, 30)))
+  camera2.lookAt(theObject.position)
+
+  if (turn) {
+    camera = camera1;
+  } else {
+    camera = camera2;
+  }
+  var time = performance.now() * 0.001;
+
+
+  water.material.uniforms.time.value += 1.0 / 60.0;
+  renderer.render(scene, camera);
+
+  // stats.update();
+}
+
+		</script>
+	</body>
+</html>

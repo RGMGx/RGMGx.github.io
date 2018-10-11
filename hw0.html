@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+	
+	<body>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js">
+
+
+</script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js">
+
+
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></script>
+
+
+
+		<script>
+			var renderer, camera, controls, scene;
+var stats;
+
+init();
+animate();
+
+function init() {
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+  document.body.appendChild(renderer.domElement);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+  camera.position.z = 50; // important
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+
+  scene = new THREE.Scene();
+
+  let gridXZ = new THREE.GridHelper(100, 10, 'red', 'white');
+  scene.add(gridXZ);
+
+  stats = new Stats();
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.top = '0px';
+  stats.domElement.style.zIndex = 100;
+  document.body.appendChild(stats.domElement);
+
+
+  let axes = new THREE.AxisHelper(10);
+  scene.add(axes);
+
+  var cubeGeometry = new THREE.BoxGeometry(20, 5, 10);
+  var cubeMaterial = new THREE.MeshNormalMaterial();
+  cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+  cube.position.y = 5;
+  // scene.add(cube);
+  var headGeometry = new THREE.CylinderGeometry(2, 4, 4, 20);
+  var headMaterial = new THREE.MeshNormalMaterial();
+
+  head = new THREE.Mesh(headGeometry, headMaterial);
+  head.position.x = 5;
+  head.position.y = 10;
+  // scene.add(head);
+  car = new THREE.Object3D();
+  car.add(cube, head);
+  scene.add(car);
+
+}
+
+var angle = 0;
+
+function animate() {
+
+
+  angle += 0.01;
+  car.position.set(40 * Math.cos(angle), 0, -40 * Math.sin(angle));
+  car.rotation.y = angle + Math.PI / 2;
+
+
+  controls.update();
+  renderer.render(scene, camera);
+  stats.update();
+
+  requestAnimationFrame(animate);
+}
+
+		</script>
+	</body>
+</html>
