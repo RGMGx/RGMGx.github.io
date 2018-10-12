@@ -302,10 +302,14 @@ function update(dt) {
 
 
   var angle_thrust = angle;
-  if (keyboard.pressed("left"))
-    angle_thrust += 0.3;
-  if (keyboard.pressed("right"))
-    angle_thrust -= 0.3;
+  if (keyboard.pressed("left")){
+    power = 0.1;
+	  angle_thrust += 0.2;
+  }
+  if (keyboard.pressed("right")){
+   	power = 0.1
+	  angle_thrust -= 0.2;
+  }
 
   // compute force
   var thrust = new THREE.Vector3(1, 0, 0).multiplyScalar(power).applyAxisAngle(new THREE.Vector3(0, 1, 0), angle_thrust);
@@ -326,13 +330,14 @@ function animate() {
 
   // car update
   theObject.position.copy(pos);
-  theObject.rotation.y = angle;
+  theObject.rotation.y = angle + Math.PI;
   //
   requestAnimationFrame(animate);
   let camera;
-  camera2.position.copy(theObject.localToWorld(new THREE.Vector3(-80, 30, 30)))
+  camera2.position.copy(theObject.localToWorld(new THREE.Vector3(80, 30, -50)))
   camera2.lookAt(theObject.position)
-camera1.lookAt(theObject.position)
+  camera1.position.copy(theObject.localToWorld(new THREE.Vector3(300, 150, 120)))
+  camera1.lookAt(theObject.position)
   if (turn) {
     camera = camera1;
   } else {
