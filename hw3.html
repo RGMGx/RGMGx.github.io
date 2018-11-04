@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+
+		<style>
+				body {
+	  background-color: #fff;
+	  color: #111;
+	  margin: 0px;
+	  overflow: hidden;
+	  font-family: Monospace;
+	  font-size: 20px;
+	}
+
+	#info {
+	  position: absolute;
+	  top: 0px;
+	  width: 100%;
+	  padding: 5px;
+	  text-align: center;
+	  color: #ffff00
+	}
+
+	a {
+	  color: #00ffff
+	}
+
+	strong {
+	  color: red
+	}
+
+	#container {
+	  z-index: 0;
+	  left: 0px;
+	  top: 0px;
+	  overflow: hidden;
+	  position: absolute;
+	  width: 100%;
+	  height: 100%;
+	}
+
+	#gui {
+	  position: absolute; //top: 40px;
+	  left: 20px;
+	  height: 350px;
+	}
+
+		</style>
+	</head>
+	<body>
+<div id="info">
+  hw3 character dance <br>
+
+<button id="toggle" style="width:20%" onclick="audio.play()" onclick="audio.pause()">BGM_PLAY</button><br>
+</div>
+ <audio id="soundtrack" autoplay loop style="display:none">
+<source src="https://rgmgx.github.io/sounds/bgm_maoudamashii_8bit26.mp3"  type='audio/mp3'>
+</audio>
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"></script>
+
+
+		<script>
+			
+var turn = true
+$("#toggle").click(function() {
+  turn = !turn;
+});
+
+
+
+
+
+
+//<button id="toggle" style="width:20%" onclick="audio.play()" onclick="audio.pause()">BGM_PLAY</button><br>
+var scene, renderer, camera, controls;
+var blue, body1
+var theta = 0
+///////////////////////////////////////////////////
+var T = 4;
+var pose1 = {
+  theta1: 0.1,
+  theta2: 0.9
+}
+var pose2p = {
+  theta1: -1.0,
+  theta2: 0.5
+}
+var pose2 = {
+  theta1: 0.9,
+  theta2: 0.4
+}
+var pose1p = {
+  theta1: -1.0,
+  theta2: 0.1
+}
+var pose3 = {
+  theta1: 0.1,
+  theta2: 0.1
+}
+
+var keys = [
+  [0, pose1],
+  [0.4, pose2p],
+  [0.6, pose2],
+  [0.8, pose1p],
+  [0.9, pose3],
+  [1, pose1]
+
+];
+/*
+var gcontrols = {
+  theta1: 0.1,
+  theta2: 0.1
+}
+*/
+var clock = new THREE.Clock();
+var ts = clock.getElapsedTime();
+var intKey = [];
+//////////////////////////////////////
+function loadJSON() {
+  return {
+    "preset": "pose2",
+    "remembered": {
+      "Default": {
+        "0": {
+          "theta1": 0.1,
+          "theta2": 0.1
+        }
+      },
+      "pose1": {
+        "0": {
+          "theta1": 0.7283234362993365,
+          "theta2": 0.277456547161652
+        }
+      },
+      "pose2": {
+        "0": {
+          "theta1": 1.8381496249459446,
+          "theta2": 0.832369641484956
+        }
+      }
+    },
+    "closed": false,
+    "folders": {}
+  };
+}
+
+/////////////////////////////////////////////
+class MakeBody {
+  constructor() {
+    this.theta1 = 0.1;
+    this.theta2 = 0.1;
+  }
+  init(len) {
+    let twoLink = new THREE.Object3D();
+    let mat = new THREE.MeshPhongMaterial({
+      color: 0x000000
+    })
+    this.link1 = new THREE.Object3D();
+  //  this.link1.add(new THREE.AxisHelper(10))
+    let mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 3, 3), mat)
+    this.link1.add(mesh);
+    mesh.position.x = len / 2
+    twoLink.add(this.link1)
+    this.link2 = new THREE.Object3D();
+
+    let mesh2 = new THREE.Mesh(new THREE.BoxGeometry(len, 3, 3), mat)
+    mesh2.position.x = len / 2
+    this.link2.add(mesh2);
+    //this.link2.add(new THREE.AxisHelper(10))
+    this.link1.add(this.link2)
+    this.link2.position.x = len
+    twoLink.rotation.z = -Math.PI / 4
+    twoLink.position.x = 10
+    twoLink.position.y = 20
+    //
+    let twoLink2 = new THREE.Object3D();
+    this.link3 = new THREE.Object3D();
+    //this.link3.add(new THREE.AxisHelper(10))
+    let mesh3 = new THREE.Mesh(new THREE.BoxGeometry(len, 3, 3), mat)
+    this.link3.add(mesh3);
+    mesh3.position.x = -len / 2
+    twoLink2.add(this.link3)
+    this.link4 = new THREE.Object3D();
+   // this.link4.add(new THREE.AxisHelper(10))
+    let mesh4 = new THREE.Mesh(new THREE.BoxGeometry(len, 3, 3), mat)
+    mesh4.position.x = -len / 2
+    this.link4.add(mesh4);
+    this.link3.add(this.link4)
+    this.link4.position.x = -len
+    twoLink2.rotation.z = Math.PI / 4
+    twoLink2.position.x = -10
+    twoLink2.position.y = 20
+    //
+    let twoLink3 = new THREE.Object3D();
+    this.link5 = new THREE.Object3D();
+    //this.link5.add(new THREE.AxisHelper(10))
+    let mesh5 = new THREE.Mesh(new THREE.BoxGeometry(len, 3, 3), mat)
+    this.link5.add(mesh5);
+    mesh5.position.x = len / 2
+    twoLink3.add(this.link5)
+    this.link6 = new THREE.Object3D();
+    //this.link6.add(new THREE.AxisHelper(10))
+    let mesh6 = new THREE.Mesh(new THREE.BoxGeometry(len, 3, 3), mat)
+    mesh6.position.x = len / 2
+    this.link6.add(mesh6);
+    this.link5.add(this.link6)
+    this.link6.position.x = len
+    twoLink3.rotation.z = -Math.PI / 2
+    twoLink3.position.x = 10
+    twoLink3.position.y = -len
+    //
+    let twoLink4 = new THREE.Object3D();
+    this.link7 = new THREE.Object3D();
+    //this.link7.add(new THREE.AxisHelper(10))
+    let mesh7 = new THREE.Mesh(new THREE.BoxGeometry(len, 3, 3), mat)
+    this.link7.add(mesh7);
+    mesh7.position.x = len / 2
+    twoLink4.add(this.link7)
+    this.link8 = new THREE.Object3D();
+    //this.link8.add(new THREE.AxisHelper(10))
+    let mesh8 = new THREE.Mesh(new THREE.BoxGeometry(len, 3, 3), mat)
+    mesh8.position.x = len / 2
+    this.link8.add(mesh8);
+    this.link7.add(this.link8)
+    this.link8.position.x = len
+    twoLink4.rotation.z = -Math.PI / 2
+    twoLink4.position.x = -10
+    twoLink4.position.y = -len
+    //
+    this.face = new THREE.Object3D()
+    let sphere = new THREE.SphereGeometry(20, 32, 32);
+    let loader = new THREE.TextureLoader();
+    loader.crossOrigin = '';
+    this.texture = loader.load('https://rgmgx.github.io/textures/face.jpg');
+    let face_color = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      map: this.texture
+    });
+    let mesh9 = new THREE.Mesh(sphere, face_color)
+    this.face.add(mesh9);
+    this.face.position.y = 40
+    this.face.rotation.y = -Math.PI / 2
+    //
+    this.body = new THREE.Mesh(new THREE.CylinderGeometry(10, 20, 50, 32), new THREE.MeshPhongMaterial({
+      color: 0x46a3ff
+    }))
+    this.body.add(this.face)
+    this.body.add(twoLink, twoLink2, twoLink3, twoLink4)
+    this.body.position.x = 10
+
+    return this.body;
+
+  }
+
+}
+///////////////////////////////////////////////////////
+
+init();
+animate();
+
+////////////////////////////////////////////////////////////////
+
+function init() {
+
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 10000);
+  camera.position.y = 360;
+  camera.position.z = 400;
+  camera.lookAt(new THREE.Vector3(0, 0, 0));
+  document.body.appendChild(renderer.domElement);
+  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+  var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+  //scene.add(gridXZ);
+  //////////////////////////////////////////////////
+  let loader = new THREE.TextureLoader()
+  loader.crossOrigin = '';
+
+  texture = loader.load('https://rgmgx.github.io/textures/chess.jpg');
+
+  texture.repeat.set(4, 4);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+
+  mesh = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000),
+    new THREE.MeshPhongMaterial({
+      map: texture
+    }))
+  mesh.rotation.x = -Math.PI / 2;
+  scene.add(mesh);
+  //////////////////////////////////////////////////
+  body1 = new MakeBody(); // global 
+  blue = body1.init(25);
+  scene.add(blue);
+  blue.position.set(0, 70, 0) //75
+  //////////////////////////////////////////////
+  window.addEventListener('resize', onWindowResize, false);
+  /////////////////////////////////////////////////////////
+
+
+  ////////////////////////////////////////////
+  light1 = new THREE.PointLight(0xffffff);
+  light1.position.set(100, 300, 200);
+  scene.add(light1);
+  light2 = new THREE.PointLight(0xffd2d2);
+  light2.position.set(80, 300, 250);
+  scene.add(light2);
+  light3 = new THREE.PointLight(0x0066cc);
+  light3.position.set(200, 300, -100);
+  scene.add(light3);
+
+  ////////////////////
+  /*
+    var gui = new dat.GUI({
+       load: loadJSON()
+    });
+    gui.domElement.id = 'gui';
+    gui.remember(gcontrols)
+    gui.add(gcontrols, 'theta1', 0, 3.2);
+    gui.add(gcontrols, 'theta2', 0, 3.2);
+  */
+}
+
+
+function onWindowResize() {
+  var width = window.innerWidth;
+  var height = window.innerHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+}
+
+
+function animate() {
+  theta += 0.04
+  light1.position.set(200 * Math.cos(theta), 100, 200 * Math.sin(theta))
+  light2.position.set(-200 * Math.cos(theta), 120, -120 * Math.sin(theta))
+  light3.position.set(250 * Math.cos(theta), 120, -300 * Math.sin(theta))
+
+  requestAnimationFrame(animate);
+  render();
+}
+
+function render() {
+  update();
+  renderer.render(scene, camera);
+}
+/////////////////////////////////////////////////////////////
+function autoPlay() {
+  var audio = document.getElementById('soundtrack');
+  audio.play();
+}
+
+function closePlay() {
+  var audio = document.getElementById('soundtrack');
+  audio.pause();
+}
+///////////////////////////////////////////
+function keyframe(t) {
+  var s = ((t - ts) % T) / T;
+  for (var i = 1; i < keys.length; i++) {
+    if (keys[i][0] > s) break;
+  }
+  // take i-1
+  var ii = i - 1;
+  var a = (s - keys[ii][0]) / (keys[ii + 1][0] - keys[ii][0]);
+  pose1[0] = keys[ii][1].theta1 * (1 - a) + keys[ii + 1][1].theta1 * a;
+  console.log(pose1[0])
+  pose1[1] = keys[ii][1].theta2 * (1 - a) + keys[ii + 1][1].theta2 * a;
+  intKey = [pose1[0], pose1[1]]
+
+}
+
+function update() {
+
+  
+   if(turn){
+   autoPlay()
+    let sd = clock.getElapsedTime()
+    keyframe(sd);
+    body1.link5.rotation.y = Math.sin(pose1[0])
+    body1.link6.rotation.y = Math.sin(pose1[1])
+    body1.link7.rotation.y = -Math.sin(pose1[0])
+    body1.link8.rotation.y = Math.sin(pose1[1])
+    body1.link1.rotation.y = Math.cos(pose1[0] + 1)
+    body1.link2.rotation.y = -Math.sin(pose1[0] + 1)
+    body1.link4.rotation.y = Math.sin(pose1[0] + 1)
+
+    body1.link3.rotation.y = Math.cos(pose1[0] + 1)
+    //body1.body.rotation.x = Math.cos(pose1[0])/2
+    body1.body.position.y += Math.sin(theta) / 20
+    if (sd >= 8) {
+
+      body1.link1.rotation.z = Math.sin(pose1[0])
+      body1.link3.rotation.z = Math.cos(pose1[0])
+      body1.link3.rotation.y = Math.PI / 2
+      body1.link3.rotation.x = -Math.PI / 4
+      body1.link4.rotation.z = Math.sin(pose1[1])
+      body1.link2.rotation.y = -Math.cos(pose1[1])
+      body1.link1.rotation.y = Math.sin(pose1[1]) - Math.PI / 2
+      body1.link5.rotation.y = -Math.PI / 6
+      body1.link6.rotation.y = Math.sin(pose1[1])
+      body1.link6.position.y = Math.sin(pose1[1])
+
+      body1.link7.rotation.y = 0
+      body1.link8.rotation.y = 0
+
+    }
+
+    if (sd >= 21) {
+      body1.link7.rotation.y = -Math.PI / 2
+      body1.link8.rotation.y = Math.sin(pose1[1] + 1)
+      body1.link5.rotation.y = 0
+      body1.link6.rotation.y = Math.PI / 2
+      body1.link1.rotation.z = Math.cos(pose1[1])
+      body1.body.position.y = 50
+      body1.link2.rotation.z = Math.PI / 4
+    }
+    if (sd >= 29) {
+    body1.body.position.y = 70
+      body1.link3.rotation.z = -Math.cos(pose1[1])
+      
+      body1.link5.rotation.y = Math.sin(pose1[0])
+     
+      body1.link7.rotation.y = Math.sin(pose1[0])
+      body1.body.rotation.y = -Math.sin(pose1[0])
+      body1.link6.rotation.y = Math.sin(pose1[1]+1)
+     body1.link8.rotation.y = Math.sin(pose1[1]+1)
+     
+     body1.body.position.y += Math.sin(theta)/20
+      
+    }
+}
+else{closePlay()}
+}
+
+		</script>
+	</body>
+</html>
