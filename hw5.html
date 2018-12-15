@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<title>three.js webgl - morphtargets - MD2 controls</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body {
+  color: #000;
+  font-family: Monospace;
+  font-size: 13px;
+  text-align: center;
+  font-weight: bold;
+  background-color: #fff;
+  margin: 0px;
+  overflow: hidden;
+}
+
+#info {
+  position: absolute;
+  padding: 10px;
+  width: 100%;
+  text-align: center;
+  color: #000;
+}
+
+a {
+  color: skyblue;
+}
+
+	</style>
+</head>
+
+<body>
+<div id="info">
+  <a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> - HW5 -
+  <br />
+
+  <br>
+  <p id='msg'></p>
+  <audio autoplay="display:none controls="" loop="" preload=""> 
+		  <source src="https://rgmgx.github.io/sounds/bgm_maoudamashii_8bit23.mp3" type="audio/mp3">  
+</audio>
+  <audio id="collisionsound" style="display:none">
+<source src="
+        https://rgmgx.github.io/sounds/strange_bell.mp3
+      " type='audio/mp3'>
+</audio>
+<audio id="water" style="display:none">
+<source src="
+        https://rgmgx.github.io/sounds/water_land.mp3
+      " type='audio/mp3'>
+</audio>
+</div>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+<script src='https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/js/loaders/MD2Loader.js'></script>
+<script src='https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/js/MorphBlendMesh.js'></script>
+<script src='https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/js/MD2CharacterComplex.js'></script>
+<script src='https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/js/Gyroscope.js'></script>
+
+<script src="https://threejs.org/examples/js/objects/Sky.js"></script>
+
+<script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+<script src="https://threejs.org/examples/js/objects/Water.js"></script>
+<script src="https://threejs.org/examples/js/objects/Sky.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@2410ad1a8f5844df00191600eafda59def537830/examples/js/loaders/MTLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@2410ad1a8f5844df00191600eafda59def537830/examples/js/loaders/OBJLoader.js"></script>
+
+<script>
+class MD2Wrapper {
+  constructor(config, controls, pos, scale = 1) {
+
+    this.md2 = new THREE.MD2CharacterComplex();
+    this.md2.scale = scale
+    this.md2.controls = controls
+
+    this.md2.onLoadComplete = function() {
+      // here: 'this' is md2
+
+      // cast and receive shadows
+      this.enableShadows(true);
+
+      this.setWeapon(0);
+      this.setSkin(0);
+
+      //this.root.position.copy (pos);
+      this.root.position.x = pos.x;
+      this.root.position.z = pos.z;
+
+      // y is automatically set, accoording to scale ...				
+      console.log('y is ' + this.root.position.y)
+
+      scene.add(this.root);
+
+    }
+    this.md2.loadParts(config);
+
+  }
+}
+
+
+var SCREEN_WIDTH = window.innerWidth;
+var SCREEN_HEIGHT = window.innerHeight;
+
+var container, stats;
+var camera, scene, renderer;
+
+var yoshiWrap, droidekaWrap;
+var light;
+
+var box3, box3Helper;
+var theObject = new THREE.Object3D()
+var tomato2 = new THREE.Object3D()
+var cameraControls;
+var clock = new THREE.Clock();
+
+init();
+animate();
+
+function init() {
+
+  container = document.createElement('div');
+  document.body.appendChild(container);
+
+  // CAMERA
+
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 4000);
+  camera.position.set(0, 150, 1300);
+
+  // SCENE
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+  scene.fog = new THREE.Fog(0xffffff, 1000, 4000);
+
+  scene.add(camera);
+  /////////////sky
+
+
+
+  ////////////
+  // LIGHTS
+
+  scene.add(new THREE.AmbientLight(0x222222));
+
+  light = new THREE.DirectionalLight(0xffffff, 2.25);
+  light.position.set(200, 450, 500);
+
+  light.castShadow = true;
+
+  light.shadow.mapSize.width = 1024;
+  light.shadow.mapSize.height = 512;
+
+  light.shadow.camera.near = 100;
+  light.shadow.camera.far = 1200;
+
+  light.shadow.camera.left = -1000;
+  light.shadow.camera.right = 1000;
+  light.shadow.camera.top = 350;
+  light.shadow.camera.bottom = -350;
+
+  scene.add(light);
+  // scene.add( new THREE.CameraHelper( light.shadow.camera ) );
+
+
+  //  GROUND
+
+  //var gt = new THREE.TextureLoader().load( "grasslight-big.jpg" );
+  var gt = new THREE.TextureLoader().load("https://rgmgx.github.io/textures/grasslight-big.jpg");
+  var gg = new THREE.PlaneBufferGeometry(16000, 16000);
+  var gm = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    map: gt
+  });
+
+  var ground = new THREE.Mesh(gg, gm);
+  ground.rotation.x = -Math.PI / 2;
+  ground.material.map.repeat.set(64, 64);
+  ground.material.map.wrapS = THREE.RepeatWrapping;
+  ground.material.map.wrapT = THREE.RepeatWrapping;
+  // note that because the ground does not cast a shadow, .castShadow is left false
+  ground.receiveShadow = true;
+
+  scene.add(ground);
+
+  let axes = new THREE.AxesHelper(100)
+  scene.add(axes)
+
+  // RENDERER
+
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+  container.appendChild(renderer.domElement);
+
+  renderer.gammaInput = true;
+  renderer.gammaOutput = true;
+
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+
+  // EVENTS
+
+  window.addEventListener('resize', onWindowResize, false);
+  document.addEventListener('keydown', onKeyDown, false);
+  document.addEventListener('keyup', onKeyUp, false);
+
+  // CONTROLS
+
+  cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+  cameraControls.target.set(0, 50, 0);
+  cameraControls.update();
+  /////////////water
+  var waterGeometry = new THREE.CircleBufferGeometry(1000, 32);
+  water = new THREE.Water(
+    waterGeometry, {
+
+      textureWidth: 700,
+      textureHeight: 700,
+      waterNormals: new THREE.TextureLoader().load('https://cdn.rawgit.com/mrdoob/three.js/dev/examples/textures/waternormals.jpg', function(texture) {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      }),
+      alpha: 1.0,
+      sunDirection: light.position.clone().normalize(),
+      sunColor: 0xffffff,
+      waterColor: 0x001e0f,
+      distortionScale: 3.7,
+      fog: scene.fog !== undefined
+    }
+  );
+
+  water.rotation.x = -Math.PI / 2;
+  scene.add(water);
+  water.position.set(1500, 50, 200)
+  ///rock//
+  let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  let texture = loader.load('https://rgmgx.github.io/textures/rock.png')
+  let rock = new THREE.DodecahedronGeometry(150.5)
+  let rock_m = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    map: texture
+  })
+  let r_mesh = new THREE.Mesh(rock, rock_m)
+  scene.add(r_mesh)
+  r_mesh.position.set(500, 0, 0)
+  let r_1 = r_mesh.clone()
+  scene.add(r_1)
+  r_1.position.set(500, -10, 220)
+  let r_2 = r_mesh.clone()
+  scene.add(r_2)
+  r_2.position.set(550, 50, 460)
+  let r_3 = r_mesh.clone()
+  scene.add(r_3)
+  r_3.position.set(650, 30, 700)
+  let r_4 = r_mesh.clone()
+  scene.add(r_4)
+  r_4.position.set(800, -50, 920)
+  let r_5 = r_mesh.clone()
+  scene.add(r_5)
+  r_5.position.set(950, 20, 1100)
+  let r_6 = r_mesh.clone()
+  scene.add(r_6)
+  r_6.position.set(1200, 0, 1150)
+  let r_7 = r_mesh.clone()
+  scene.add(r_7)
+  r_7.position.set(1400, -20, 1200)
+  let r_8 = r_mesh.clone()
+  scene.add(r_8)
+  r_8.position.set(1600, -30, 1150)
+  r_8.rotation.x = Math.PI / 3
+  let r_9 = r_mesh.clone()
+  scene.add(r_9)
+  r_9.position.set(1800, 10, 1200)
+  r_9.rotation.x = Math.PI / 4
+  let r_10 = r_mesh.clone()
+  scene.add(r_10)
+  r_10.position.set(2000, -20, 1100)
+  r_10.rotation.x = Math.PI / 5
+  let r_11 = r_mesh.clone()
+  scene.add(r_11)
+  r_11.position.set(2200, 30, 1000)
+  r_11.rotation.x = Math.PI / 2
+  let r_12 = r_mesh.clone()
+  scene.add(r_12)
+  r_12.position.set(2300, -10, 900)
+  r_12.rotation.y = Math.PI / 3
+  let r_13 = r_mesh.clone()
+  scene.add(r_13)
+  r_13.position.set(2400, 50, 700)
+  r_13.rotation.y = Math.PI / 5
+  let r_14 = r_mesh.clone()
+  scene.add(r_14)
+  r_14.position.set(2500, 0, 500)
+  r_14.rotation.y = Math.PI / 2
+  let r_15 = r_mesh.clone()
+  scene.add(r_15)
+  r_15.position.set(2500, -30, 300)
+  r_15.rotation.z = Math.PI / 4
+  let r_16 = r_mesh.clone()
+  scene.add(r_16)
+  r_16.position.set(2500, 50, 100)
+  r_16.rotation.z = Math.PI / 3
+  let r_17 = r_mesh.clone()
+  scene.add(r_17)
+  r_17.position.set(2500, 0, 0)
+  r_17.rotation.z = Math.PI / 5
+  let r_18 = r_mesh.clone()
+  scene.add(r_18)
+  r_18.position.set(2500, 10, -200)
+  r_18.rotation.z = Math.PI / 2
+  let r_19 = r_mesh.clone()
+  scene.add(r_19)
+  r_19.position.set(2300, -30, -400)
+  r_19.rotation.x = Math.PI / 2
+  let r_20 = r_mesh.clone()
+  scene.add(r_20)
+  r_20.position.set(2100, 20, -600)
+  r_20.rotation.x = Math.PI / 3
+  let r_21 = r_mesh.clone()
+  scene.add(r_21)
+  r_21.position.set(1900, 0, -700)
+  r_21.rotation.x = Math.PI / 4
+  let r_22 = r_mesh.clone()
+  scene.add(r_22)
+  r_22.position.set(1700, -10, -800)
+  r_22.rotation.y = Math.PI / 4
+  let r_23 = r_mesh.clone()
+  scene.add(r_23)
+  r_23.position.set(1500, -30, -800)
+  r_23.rotation.y = Math.PI / 3
+  let r_24 = r_mesh.clone()
+  scene.add(r_24)
+  r_24.position.set(1300, -50, -800)
+  r_24.rotation.y = Math.PI / 2
+  let r_25 = r_mesh.clone()
+  scene.add(r_25)
+  r_25.position.set(1100, 20, -800)
+  r_25.rotation.x = Math.PI / 2
+  let r_26 = r_mesh.clone()
+  scene.add(r_26)
+  r_26.position.set(1000, 30, -800)
+  r_26.rotation.x = Math.PI / 5
+  let r_27 = r_mesh.clone()
+  scene.add(r_27)
+  r_27.position.set(800, -30, -600)
+  r_27.rotation.x = Math.PI / 3
+  let r_28 = r_mesh.clone()
+  scene.add(r_28)
+  r_28.position.set(700, -10, -400)
+  r_28.rotation.x = Math.PI / 2
+  let r_29 = r_mesh.clone()
+  scene.add(r_29)
+  r_29.position.set(600, -20, -200)
+  r_29.rotation.y = Math.PI / 2
+  /////sky
+  var sky = new THREE.Sky();
+  sky.scale.setScalar(16000);
+  scene.add(sky);
+  var uniforms = sky.material.uniforms;
+  uniforms.turbidity.value = 10;
+  uniforms.rayleigh.value = 2;
+  uniforms.luminance.value = 1;
+  uniforms.mieCoefficient.value = 0.005;
+  uniforms.mieDirectionalG.value = 0.8;
+  var parameters = {
+    distance: 400,
+    inclination: 0.3,
+    azimuth: 0.205
+  };
+  var cubeCamera = new THREE.CubeCamera(1, 200, 10);
+  cubeCamera.renderTarget.texture.minFilter = THREE.LinearMipMapLinearFilter;
+
+  function updateSun() {
+    var theta = Math.PI * (parameters.inclination - 0.5);
+    var phi = 2 * Math.PI * (parameters.azimuth - 0.5);
+    light.position.x = parameters.distance * Math.cos(phi);
+    light.position.y = parameters.distance * Math.sin(phi) * Math.sin(theta);
+    light.position.z = parameters.distance * Math.sin(phi) * Math.cos(theta);
+    sky.material.uniforms.sunPosition.value = light.position.copy(light.position);
+    water.material.uniforms.sunDirection.value.copy(light.position).normalize();
+    cubeCamera.update(renderer, scene);
+
+  }
+  updateSun();
+  /////////////////////////////////////////////////////////////////////////////
+  // CHARACTER: yoshi
+  let configdroideka = {
+
+    baseUrl: "https://rgmgx.github.io/md2models/droideka/",
+    body: "tris.MD2",
+    skins: ["droideka.png"],
+    weapons: [],
+
+    animations: {
+      move: "run",
+      idle: "stand",
+      jump: "Jump", //jump
+      attack: "crdeath"
+      //flip: ""
+      // crdeath: "",
+
+    },
+
+    walkSpeed: 800, //translation speed
+    crouchSpeed: 175
+  };
+
+
+  let configYoshi = {
+
+    baseUrl: "https://rgmgx.github.io/md2models/yoshi/",
+
+    body: "tris.md2",
+    skins: ["yoshi.png"],
+    weapons: [],
+
+    animations: {
+      move: "run",
+      idle: "stand",
+      jump: "backflip", //jump
+      attack: "point",
+      crouchMove: "cwalk",
+      crouchIdle: "cstand",
+      crouchAttach: "crattack"
+    },
+
+    walkSpeed: 700, //translation speed
+    crouchSpeed: 175
+
+  };
+  let controls = {
+
+    moveForward: false,
+    moveBackward: false,
+    moveLeft: false,
+    moveRight: false
+
+  };
+  let controlsdroideka = jsonCopy(controls);
+  droidekaWrap = new MD2Wrapper(configdroideka, controlsdroideka, new THREE.Vector3(200, 0, 0), 3)
+  yoshiWrap = new MD2Wrapper(configYoshi, controls, new THREE.Vector3(0, 0, 0), 3);
+  var gyro = new THREE.Gyroscope();
+  gyro.add(camera);
+
+  gyro.add(light, light.target);
+  yoshiWrap.md2.root.add(gyro);
+
+  box3 = new THREE.Box3();
+  box3Helper = new THREE.Box3Helper(box3)
+  scene.add(box3Helper)
+  /////stair
+  let f1 = new THREE.Mesh(new THREE.BoxGeometry(200, 50, 70), new THREE.MeshNormalMaterial({
+    transparent: true,
+    opacity: 0.8
+  }))
+  scene.add(f1)
+  f1.position.set(0, 20, 200)
+  let f2 = f1.clone()
+  scene.add(f2)
+  f2.position.set(0, 70, 270)
+  let f3 = f1.clone()
+  scene.add(f3)
+  f3.position.set(0, 120, 340)
+  let f4 = f1.clone()
+  scene.add(f4)
+  f4.position.set(0, 170, 410)
+  let f5 = f1.clone()
+  scene.add(f5)
+  f5.position.set(0, 220, 480)
+  let f6 = f1.clone()
+  scene.add(f6)
+  f6.position.set(0, 270, 550)
+  let f7 = f1.clone()
+  scene.add(f7)
+  f7.position.set(0, 320, 620)
+  let f8 = f1.clone()
+  scene.add(f8)
+  f8.position.set(0, 370, 690)
+  let f9 = f1.clone()
+  scene.add(f9)
+  f9.position.set(0, 420, 760)
+  let f10 = new THREE.Mesh(new THREE.BoxGeometry(200, 50, 200), new THREE.MeshNormalMaterial({
+    transparent: true,
+    opacity: 0.8
+  }))
+  scene.add(f10)
+  f10.position.set(0, 470, 900)
+  ////read model to stair
+  function readModel(tomato, targetSize = 60) {
+
+    var onProgress = function(xhr) {
+      if (xhr.lengthComputable) {
+        var percentComplete = xhr.loaded / xhr.total * 100;
+        console.log(Math.round(percentComplete, 2) + '% downloaded')
+      }
+
+    };
+    var onError = function(xhr) {
+      console.log("error")
+    };
+    var mtlLoader = new THREE.MTLLoader();
+    mtlLoader.setPath('https://rgmgx.github.io/models/');
+
+    mtlLoader.load('Tomato_01.mtl', function(materials) {
+      materials.preload();
+      var objLoader = new THREE.OBJLoader();
+      objLoader.setMaterials(materials);
+      objLoader.setPath('https://rgmgx.github.io/models/')
+      objLoader.load('Tomato_01.obj', function(object) {
+        let theObject = unitize(object, targetSize);
+        // theObject.add(new THREE.BoxHelper(theObject))
+        theObject.name = 'OBJ';
+
+        scene.add(theObject)
+        
+        theObject.position.set(0, 520, 920)
+        theObject.rotation.x = Math.PI / 2
+        tomato2 = theObject.clone()
+        tomato2.position.set(1500,130,200)
+        scene.add(tomato2)
+      }, onProgress, onError);
+    });
+  }
+  readModel();
+}
+
+function unitize(object, targetSize) {
+  var box3 = new THREE.Box3();
+  box3.setFromObject(object);
+  var size = new THREE.Vector3();
+  size.subVectors(box3.max, box3.min)
+  var center = new THREE.Vector3()
+  center.addVectors(box3.max, box3.min).multiplyScalar(0.5);
+
+  console.log('center:' + center.x + ', ' + center.y + ', ' + center.z)
+
+  console.log('size:' + size.x + ', ' + size.y + ', ' + size.z)
+
+  var objSize = Math.max(size.x, size.y, size.z)
+  var scaleSet = targetSize / objSize
+
+  theObject.add(object)
+  object.scale.set(scaleSet, scaleSet, scaleSet)
+  object.position.set(-center.x * scaleSet, -center.y * scaleSet + 24, -center.z * scaleSet)
+
+  return theObject
+
+}
+
+function sePlay() {
+  var audio = document.getElementById('collisionsound');
+  audio.play();
+}
+function waterPlay() {
+  var audio = document.getElementById('water');
+  audio.play();
+}
+function groundLevel(x, z) {
+  if (x < 2600 && x > 400 && z > -900 && z < 1300) {
+  	waterPlay()
+    if (x < 2300 && x > 700 && z > -600 && z < 1000) {
+    	if(x >=1400&&x<=1600 && z >=100&&z<=300){
+      	sePlay()
+        scene.remove(tomato2)
+      }
+      return 50
+    } else
+      return 180
+  } else if (x < 100 && x > -100 && z < 950 && z > 200) {
+
+    if (z > 830) {
+			sePlay()
+      scene.remove(theObject)
+      return 570
+    } else if (z > 760) return 520 //470+50
+    else if (z > 690) return 470
+    else if (z > 620) return 420
+    else if (z > 550) return 370
+    else if (z > 480) return 320
+    else if (z > 410) return 270
+    else if (z > 340) return 220
+    else if (z > 270) return 170
+    else if (z > 200) return 100
+  } else return 50
+  /*
+  let px = 1500
+  let pz = 200
+  let r = 1000
+  let c = ((x - px) * (x - px)) + ((z - pz) * (z - pz))
+  
+  if (c >= r * r - 150 && c <= r * r + 150) {
+    return 180
+  } else {
+    return 50
+  }*/
+}
+
+// EVENT HANDLERS
+
+
+function jsonCopy(src) {
+  return JSON.parse(JSON.stringify(src))
+}
+
+function onWindowResize(event) {
+
+  SCREEN_WIDTH = window.innerWidth;
+  SCREEN_HEIGHT = window.innerHeight;
+
+  renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+  camera.updateProjectionMatrix();
+
+}
+
+function onKeyDown(event) {
+
+  event.stopPropagation();
+  let controlsY = yoshiWrap.md2.controls;
+  let controlsW = droidekaWrap.md2.controls
+  switch (event.keyCode) {
+
+    case 38:
+      /*up*/
+      controlsY.moveForward = true;
+      break;
+    case 87:
+      /*W*/
+      controlsW.moveForward = true;
+      break;
+
+    case 40:
+      /*down*/
+      controlsY.moveBackward = true;
+      break;
+    case 83:
+      /*S*/
+      controlsW.moveBackward = true;
+      break;
+
+    case 37:
+      /*left*/
+      controlsY.moveLeft = true;
+      break;
+    case 65:
+      /*A*/
+      controlsW.moveLeft = true;
+      break;
+
+    case 39:
+      /*right*/
+      controlsY.moveRight = true;
+      break;
+    case 68:
+      /*D*/
+      controlsW.moveRight = true;
+      break;
+
+    case 32:
+      /*space*/
+      controlsY.jump = true;
+      break;
+    case 90:
+      //z
+      controlsW.jump = true;
+      break;
+      // jump: should save the animation before jump
+      // return to that animation, when SPACE is up
+
+    case 67:
+      /*C*/
+      controlsY.crouch = true;
+      break;
+
+    case 17:
+      /*ctrl*/
+      controlsY.attack = true;
+      break;
+    case 81:
+      //Q
+      controlsW.attack = true;
+      break;
+
+
+
+  }
+
+}
+
+function onKeyUp(event) {
+
+  event.stopPropagation();
+  let controlsY = yoshiWrap.md2.controls;
+  let controlsW = droidekaWrap.md2.controls;
+  switch (event.keyCode) {
+
+    case 38:
+      /*up*/
+      controlsY.moveForward = false;
+      break;
+    case 87:
+      /*W*/
+      controlsW.moveForward = false;
+      break;
+
+    case 40:
+      /*down*/
+      controlsY.moveBackward = false;
+      break;
+    case 83:
+      /*S*/
+      controlsW.moveBackward = false;
+      break;
+
+    case 37:
+      /*left*/
+      controlsY.moveLeft = false;
+      break;
+    case 65:
+      /*A*/
+      controlsW.moveLeft = false;
+      break;
+
+    case 39:
+      /*right*/
+      controlsY.moveRight = false;
+      break;
+    case 68:
+      /*D*/
+      controlsW.moveRight = false;
+      break;
+
+    case 32:
+      /*space*/
+      controlsY.jump = false;
+      break;
+      // jump: should save the animation before jump
+      // return to that animation, when SPACE is up
+
+    case 67:
+      /*C*/
+      controlsY.crouch = false;
+      break;
+    case 17:
+      /*ctrl*/
+      controlsY.attack = false;
+      break;
+    case 90:
+      //z
+      controlsW.jump = false;
+      break;
+
+
+    case 81:
+      //Q
+      controlsW.attack = false;
+      break;
+
+  }
+
+}
+
+//
+
+function animate() {
+
+  requestAnimationFrame(animate);
+  render();
+  water.material.uniforms.time.value += 1.0 / 60.0;
+  renderer.render(scene, camera);
+}
+
+function render() {
+
+  box3.setFromObject(yoshiWrap.md2.root)
+
+  var delta = clock.getDelta();
+  if (yoshiWrap.md2) {
+    yoshiWrap.md2.update(delta)
+    yoshiWrap.md2.root.position.y = groundLevel(yoshiWrap.md2.root.position.x, yoshiWrap.md2.root.position.z)
+
+  }
+  if (droidekaWrap.md2) {
+    droidekaWrap.md2.update(delta)
+    droidekaWrap.md2.root.position.y = groundLevel(droidekaWrap.md2.root.position.x, droidekaWrap.md2.root.position.z)
+
+  }
+  renderer.render(scene, camera);
+
+}
+
+
+</script>
+//////////////////////
+	// EVENT HANDLERS
+
+	function onWindowResize( event ) {
+
+		SCREEN_WIDTH = window.innerWidth;
+		SCREEN_HEIGHT = window.innerHeight;
+
+		renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+
+		camera.aspect = SCREEN_WIDTH/ SCREEN_HEIGHT;
+		camera.updateProjectionMatrix();
+
+	}
+
+	//
+
+	function animate() {
+
+		requestAnimationFrame( animate );
+		render();
+		
+		
+
+	}
+
+	// new 'render': use JavaScript closure, move up
+	
+</script>
+
+</body>
+</html>
