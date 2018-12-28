@@ -15,7 +15,25 @@ function agentMesh (size, colorName='red') {
 	return new THREE.Mesh (geometry, 
 	     new THREE.MeshBasicMaterial({color:colorName, wireframe:true}))  
 }
+window.onload = function() {
 
+  var display = document.querySelector('#time'),
+      timer = new CountDownTimer(5);
+
+  timer.onTick(format).onTick(restart).start();
+
+  function restart() {
+    if (this.expired()) {
+      setTimeout(function() { timer.start(); }, 1000);
+    }
+  }
+
+  function format(minutes, seconds) {
+    minutes = minutes < 10 ? "0" + minutes : minutes;
+    seconds = seconds < 10 ? "0" + seconds : seconds;
+    display.textContent = minutes + ':' + seconds;
+  }
+};
 class Agent {
   constructor(pos, halfSize) {
   	this.name = "jmchen";
@@ -25,7 +43,7 @@ class Agent {
     this.target = null;
     this.halfSize = halfSize;  // half width
     this.mesh = agentMesh (this.halfSize, 'cyan');
-    this.MAXSPEED = 50;
+    this.MAXSPEED = 180;
     this.ARRIVAL_R = 30;
     
     this.score = 0;
@@ -53,7 +71,28 @@ class Agent {
     // pick the most threatening one
     // apply the repulsive force
     // (write your code here)
-
+	let vhat = this.vel.clone().normalize();
+	let point = obs[0].center.clone().sub (this.pos) // c-p
+	let proj  = point.dot(vhat);
+	let perp = new THREE.Vector3();
+	let overlap = obs[0].size + this.halfSize-perp.length()
+    
+const REACH = 80
+const K = 5
+	if (proj > 0 && proj < REACH) {
+		
+		perp.subVectors (point, vhat.clone().setLength(proj));
+		
+    if (overlap > 0) {
+		overlap += perp.length()
+			perp.setLength (K*overlap);
+			perp.negate()
+      this.force.add (perp);
+			console.log ("hit:", perp);
+			
+		}
+	}
+  
 	// Euler's method       
     this.vel.add(this.force.clone().multiplyScalar(dt));
 
