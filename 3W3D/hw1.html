@@ -9,10 +9,11 @@
 background:pink;width:20px;height:20px;  
 border-radius:15px;z-index:1"></div>
 -->
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
   <img src="https://rgmgx.github.io/3W3D/xmastree.jpg" style="position:absolute;top:0vw;left:0vw;width:100vw;z-index:-1">
 
 </div>
-<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 
 <p id='status'></p>
 <button id="toggle">
@@ -20,7 +21,7 @@ Turn OFF
 </button>
 
 		<script>
-	var status = false;
+	var status = 1;
 
 var turn = 0
 
@@ -131,8 +132,8 @@ function init() {
   // light13.changeColor();
 
   $('#toggle').click(function() {
-    status = !status
-    if (status === false) {
+    status = -status
+    if (status == 1) {
       //self.element.style.background = "hsl(40, 20%, 50%)";
       $('#toggle').text('Turn ON');
       turn = 1
