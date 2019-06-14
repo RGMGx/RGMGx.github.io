@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+	
+	<body>
+
+		<div>
+  <div id="container">
+
+</div>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@2410ad1a8f5844df00191600eafda59def537830/examples/js/loaders/MTLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@2410ad1a8f5844df00191600eafda59def537830/examples/js/loaders/OBJLoader.js"></script>
+
+		<script>
+	
+var UNITWIDTH = 90; // Width of a cubes in the maze
+var UNITHEIGHT = 60; // Height of the cubes in the maze
+
+var camera, scene, renderer;
+var totalCubesWide; // How many cubes wide the maze will be
+var collidableObjects = []; // An array of collidable objects used later
+var mapSize;
+var sphere, ground;
+
+init();
+animate();
+
+
+function init() {
+// Create the scene where everything will go
+    scene = new THREE.Scene();
+
+    // Add some fog for effects
+    scene.fog = new THREE.FogExp2(0xcccccc, 0.0015);
+
+    // Set render settings
+    renderer = new THREE.WebGLRenderer();
+    renderer.setClearColor(scene.fog.color);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Get the HTML container and connect renderer to it
+    var container = document.getElementById('container');
+    container.appendChild(renderer.domElement);
+
+    // Set camera position and view details
+    camera = new THREE.PerspectiveCamera(130, window.innerWidth / window.innerHeight, 1, 2000);
+    camera.position.y = 500; // Height the camera will be looking from
+    camera.position.x = 0;
+    camera.position.z = 0;
+		camera.rotation.x =-Math.Pi/2;
+   controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+ // document.body.appendChild(renderer.domElement);
+    // Add the camera
+    scene.add(camera);
+
+//////////////////////
+
+//////////////////////
+var geometry = new THREE.SphereGeometry( 60, 32, 32 );
+var material = new THREE.MeshPhongMaterial( {color: 0xffff00} );
+sphere = new THREE.Mesh( geometry, material );
+scene.add( sphere );
+sphere.position.y = 40;
+    // Add the walls(cubes) of the maze
+    createMazeCubes();
+    createGround();
+    createPerimWalls();
+
+    // Add lights to the scene
+    addLights();
+
+    // Listen for if the window changes sizes and adjust
+    window.addEventListener('resize', onWindowResize, false);
+
+}
+
+function createMazeCubes() {
+  // Maze wall mapping, assuming even square
+  // 1's are cubes, 0's are empty space
+  var map = [
+    [0, 0, 1, 0, 1, 0, 1, -1, -1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, ],
+    [0, 1, 0, 0, 0, 0, 1, -1, -1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, ],
+    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, ],
+    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, ],
+    [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, ],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, ],
+    [1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, ],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, ],
+    [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, ],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, ],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, ],
+    [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, ],
+    [0, 0, 1, 0, 0, 1, -1, -1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, ],
+    [0, 0, 0, 0, 0, 1, -1, -1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+    [0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, ],
+    [1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+    [1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, ],
+    [0, 0, 1, 0, 1, 1, 1, 1, 0, 0, -1, -1, 0, 0, 1, 0, 0, 0, 0, 0, ],
+    [0, 0, 1, 1, 1, 0, 0, 0, 0, 1, -1, -1, 0, 0, 1, 0, 0, 0, 0, 0, ]
+  ];
+
+  // wall details
+   let loader = new THREE.TextureLoader()
+  loader.crossOrigin = '';
+  let texture_w = loader.load('https://rgmgx.github.io/textures/wood.jpg');
+
+  texture_w.wrapS = THREE.RepeatWrapping;
+  texture_w.wrapT = THREE.RepeatWrapping;
+  var cubeGeo = new THREE.BoxGeometry(UNITWIDTH, UNITHEIGHT, UNITWIDTH);
+  var cubeMat = new THREE.MeshPhongMaterial({
+    color: 0xff8000,map:texture_w
+  });
+
+var black = new THREE.PlaneGeometry( 100, 100, 32 );
+var b_material = new THREE.MeshBasicMaterial( { color: 0x000000 } );
+
+  // Keep cubes within boundry walls
+  var widthOffset = UNITWIDTH / 2;
+  // Put the bottom of the cube at y = 0
+  var heightOffset = UNITHEIGHT / 2;
+  
+  // See how wide the map is by seeing how long the first array is
+  totalCubesWide = map[0].length;
+
+  // Place walls where 1`s are
+  for (var i = 0; i < totalCubesWide; i++) {
+    for (var j = 0; j < map[i].length; j++) {
+      // If a 1 is found, add a cube at the corresponding position
+      if (map[i][j]==1) {
+        // Make the cube
+        var cube = new THREE.Mesh(cubeGeo, cubeMat);
+        // Set the cube position
+        cube.position.z = (i - totalCubesWide / 2) * UNITWIDTH + widthOffset;
+        cube.position.y = heightOffset;
+        cube.position.x = (j - totalCubesWide / 2) * UNITWIDTH + widthOffset;
+        // Add the cube
+        scene.add(cube);
+        // Used later for collision detection
+        collidableObjects.push(cube);
+       
+        // Add the cube
+        
+       }
+       else if(map[i][j] == -1){
+       	var circle = new THREE.Mesh(black, b_material )
+        circle.position.z = (i - totalCubesWide / 2) * UNITWIDTH + widthOffset;
+        circle.position.y = heightOffset;
+        circle.position.x = (j - totalCubesWide / 2) * UNITWIDTH + widthOffset;
+         scene.add(circle);
+        circle.rotation.x =-Math.PI/2
+        // Used later for collision detection
+        //collidableObjects.push(circle);
+      }
+    }
+  }
+    // The size of the maze will be how many cubes wide the array is * the width of a cube
+    mapSize = totalCubesWide * UNITWIDTH;
+}
+function onWindowResize() {
+  var ww = $("#container").innerWidth();
+  var hh = $("#container").innerHeight();
+
+  camera.aspect = ww / hh;
+  camera.updateProjectionMatrix();
+  renderer.setSize(ww, hh);
+}
+    // The width/depth of the maze
+
+function createGround() {
+    // Create ground geometry and material
+    var groundGeo = new THREE.PlaneGeometry(mapSize, mapSize);
+    let loader = new THREE.TextureLoader()
+  loader.crossOrigin = '';
+  let texture_w = loader.load('https://rgmgx.github.io/textures/wood.jpg');
+
+  texture_w.wrapS = THREE.RepeatWrapping;
+  texture_w.wrapT = THREE.RepeatWrapping;
+  
+    var groundMat = new THREE.MeshPhongMaterial({ color: 0xA0522D,map : texture_w, side: THREE.DoubleSide});
+		
+    ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.position.set(0, 1, 0);
+    // Rotate the place to ground level
+    ground.rotation.x = degreesToRadians(90);
+    scene.add(ground);
+}
+function createPerimWalls() {
+    var halfMap = mapSize / 2;  // Half the size of the map
+    var sign = 1;               // Used to make an amount positive or negative
+ let loader = new THREE.TextureLoader()
+  loader.crossOrigin = '';
+  let texture_w = loader.load('https://rgmgx.github.io/textures/wood.jpg');
+
+ 
+    // Loop through twice, making two perimeter walls at a time
+    for (var i = 0; i < 2; i++) {
+        var perimGeo = new THREE.PlaneGeometry(mapSize, UNITHEIGHT);
+        // Make the material double sided
+        var perimMat = new THREE.MeshPhongMaterial({ color: 0x464646,map:texture_w, side: THREE.DoubleSide });
+        // Make two walls
+        var perimWallLR = new THREE.Mesh(perimGeo, perimMat);
+        var perimWallFB = new THREE.Mesh(perimGeo, perimMat);
+
+        // Create left/right wall
+        perimWallLR.position.set(halfMap * sign, UNITHEIGHT / 2, 0);
+        perimWallLR.rotation.y = degreesToRadians(90);
+        scene.add(perimWallLR);
+        // Used later for collision detection
+        collidableObjects.push(perimWallLR);
+        // Create front/back wall
+        perimWallFB.position.set(0, UNITHEIGHT / 2, halfMap * sign);
+        scene.add(perimWallFB);
+
+        // Used later for collision detection
+        collidableObjects.push(perimWallFB);
+
+        sign = -1; // Swap to negative value
+    }
+}
+function addLights() {
+  var lightOne = new THREE.DirectionalLight(0xffffff);
+  lightOne.position.set(1, 1, 1);
+  scene.add(lightOne);
+
+  // Add a second light with half the intensity
+  var lightTwo = new THREE.DirectionalLight(0xffffff, .5);
+  lightTwo.position.set(1, -1, -1);
+  scene.add(lightTwo);
+}
+function degreesToRadians(degrees) {
+  return degrees * Math.PI / 180;
+}
+
+function radiansToDegrees(radians) {
+  return radians * 180 / Math.PI;
+}
+function animate() {
+	
+  
+  requestAnimationFrame(animate);
+  render();
+}
+
+function onWindowResize() {
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+function render() {
+  renderer.render(scene, camera);
+}
+
+		</script>
+	</body>
+</html>
